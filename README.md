@@ -17,7 +17,7 @@ Proyecto final de curso del ciclo **Administración de Sistemas Informáticos en
 - 🔄 Copias de seguridad centralizadas  
 - 📁 Almacenamiento y compartición de datos en red  
 
-## 🎯 Objetivo del Proyecto
+## 🎯 Objetivo del Proyecto.
 
 Implementar una **infraestructura funcional y operativa** que permita aplicar de forma práctica los conocimientos de **virtualización, redes, seguridad y almacenamiento**, simulando un entorno profesional de administración de sistemas.
 
