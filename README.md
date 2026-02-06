@@ -51,8 +51,12 @@ scripts/
 ## 📁 Estructura del almacenamiento
 
 El NAS se monta en el servidor de archivos y se organiza de la siguiente forma:
-
-<img width="209" height="157" alt="image" src="https://github.com/user-attachments/assets/7abc4e91-c366-4ee7-9766-d7a798ddb7fd" />
+```
+/mnt/nas
+├── profesorado/
+│ ├── usuario1/
+│ └── usuario2/
+└── alumnado/```
 
 
 
