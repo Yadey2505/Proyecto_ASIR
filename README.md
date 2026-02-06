@@ -33,7 +33,6 @@ La arquitectura está diseñada para minimizar la superficie de ataque y facilit
 ## 🌐 Redes utilizadas
 
 - **Red LAN:** `192.168.1.0/24`
-- **Red secundaria:** `192.168.192.0/24`
 - **Red virtual privada:** ZeroTier (`10.x.x.x`)
 
 El acceso remoto se realiza exclusivamente a través de ZeroTier.
@@ -43,11 +42,9 @@ El acceso remoto se realiza exclusivamente a través de ZeroTier.
 ## 📂 Estructura del repositorio
 docs/
 scripts/
-diagrams/
 
 - **docs/** → Documentación técnica detallada  
 - **scripts/** → Scripts de automatización  
-- **diagrams/** → Diagramas de red y arquitectura  
 
 ---
 
@@ -124,7 +121,7 @@ Se recomienda comenzar por:
 ## 🛠️ Requisitos
 
 - Proxmox VE
-- Sistema Linux (Ubuntu Server recomendado)
+- Sistema Linux (Ubuntu Server)
 - NAS compatible con NFS
 - Cliente ZeroTier
 - Clientes Windows/Linux para acceso Samba
