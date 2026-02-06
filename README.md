@@ -56,10 +56,8 @@ El NAS se monta en el servidor de archivos y se organiza de la siguiente forma:
 ├── profesorado/
 │ ├── usuario1/
 │ └── usuario2/
-└── alumnado/```
-
-
-
+└── alumnado/
+```
 
 ### Profesorado
 - Carpeta privada por usuario
