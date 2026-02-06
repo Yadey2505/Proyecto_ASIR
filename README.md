@@ -1,4 +1,4 @@
-<img width="900" height="213" alt="image" src="https://github.com/user-attachments/assets/d284c2be-e47b-4ab9-885b-5ae9a3938fae" /># Infraestructura de almacenamiento y servicios para centro educativo
+# Infraestructura de almacenamiento y servicios para centro educativo
 
 Este proyecto documenta el diseño e implementación de una infraestructura de red y almacenamiento orientada a un entorno educativo, con separación clara de roles entre profesorado y alumnado, acceso remoto seguro y administración centralizada.
 
@@ -51,12 +51,12 @@ scripts/
 ## 📁 Estructura del almacenamiento
 
 El NAS se monta en el servidor de archivos y se organiza de la siguiente forma:
-```
-/mnt/nas
+
+´´´/mnt/nas
 ├── profesorado/
 │ ├── usuario1/
 │ └── usuario2/
-└── alumnado/```
+└── alumnado/ ```
 
 
 ### Profesorado
