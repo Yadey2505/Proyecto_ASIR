@@ -52,7 +52,7 @@ scripts/
 
 El NAS se monta en el servidor de archivos y se organiza de la siguiente forma:
 
-´´´/mnt/nas
+ /mnt/nas
 ├── profesorado/
 │ ├── usuario1/
 │ └── usuario2/
