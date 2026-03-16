@@ -86,7 +86,7 @@ El NAS se monta en el servidor de archivos y se organiza de la siguiente forma:
 ## 🚀 Automatización
 
 El proyecto incluye un script interactivo para la creación segura de usuarios del profesorado:
-scripts/alta_profesor.sh
+scripts/crear_profesor.sh
 
 El script:
 - Comprueba si el usuario ya existe
@@ -111,12 +111,6 @@ El script:
 
 Toda la documentación técnica se encuentra en la carpeta `docs/`.
 
-Se recomienda comenzar por:
-
-1. `00_resumen_proyecto.md`
-2. `01_arquitectura_red.md`
-3. `04_samba_usuarios_y_permisos.md`
-
 ---
 
 ## 🛠️ Requisitos
@@ -138,11 +132,3 @@ Este proyecto está diseñado para ser:
 - Escalable
 - Fácil de mantener
 - Correctamente documentado para uso futuro
-
-La documentación no solo describe **qué se hace**, sino **por qué se toman determinadas decisiones técnicas**.
-
-
-
-
-
-
