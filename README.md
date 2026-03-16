@@ -97,6 +97,75 @@ El script:
 
 ---
 
+## 💻 Despliegue y clonación de equipos (FOG)
+
+El sistema de despliegue de equipos del aula se basa en **FOG Project**, una plataforma de clonación y administración de equipos mediante red.
+
+FOG permite capturar imágenes completas de un sistema operativo y desplegarlas posteriormente en múltiples equipos de forma automatizada a través de la red.
+
+---
+
+### 🎯 Objetivo en la infraestructura
+
+El uso de FOG permite:
+
+- **Capturar una imagen base** de un equipo Windows configurado para el aula.
+- **Desplegar rápidamente** esa imagen en todos los equipos de los alumnos.
+- Mantener **todos los equipos con la misma configuración** de software.
+- Reducir el tiempo necesario para **reinstalaciones o recuperación del sistema**.
+- Facilitar la **gestión centralizada de los equipos del aula**.
+
+---
+
+### 🧩 Funcionamiento general
+
+El proceso de trabajo con FOG sigue tres fases principales:
+
+1. **Registro del equipo**
+   - El equipo cliente arranca por red mediante **PXE**.
+   - Se registra automáticamente en el servidor FOG.
+
+2. **Captura de imagen**
+   - Se prepara un equipo maestro con:
+     - Windows instalado
+     - Software educativo necesario
+     - Configuración del sistema del aula
+   - El equipo arranca por red y FOG **captura la imagen del disco**.
+   - La imagen queda almacenada en el servidor FOG.
+
+3. **Despliegue de la imagen**
+   - Los equipos del aula arrancan mediante **PXE**.
+   - El servidor FOG despliega la imagen almacenada.
+   - Todos los equipos reciben una **instalación idéntica**.
+
+---
+
+
+Este modelo permite reinstalar **todos los equipos del aula en pocos minutos**, garantizando que cada equipo tenga exactamente la misma configuración.
+
+---
+
+### 🌐 Integración con la red del proyecto
+
+FOG se integra dentro de la infraestructura de la siguiente manera:
+
+- **Servidor:** en la red LAN `192.168.1.139/24`
+- **Clientes:** equipos Windows del aula
+- **Arranque de red:** mediante **PXE**
+- **Gestión:** interfaz web del servidor FOG
+
+El tráfico de clonación se mantiene **dentro de la red local**, evitando saturar otros segmentos de red y mejorando la velocidad de despliegue.
+
+---
+
+### 📦 Ventajas en el entorno educativo
+
+- Instalación masiva de sistemas en **pocos minutos**
+- Restauración rápida tras errores del alumnado
+- **Homogeneidad** en todos los equipos del aula
+- Reducción del trabajo de mantenimiento
+- Gestión centralizada desde un único servidor
+
 ## 🔐 Seguridad
 
 - No se exponen servicios directamente a Internet
