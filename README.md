@@ -1,203 +1,197 @@
-# Infraestructura de almacenamiento y servicios para centro educativo
+# Infraestructura Educativa con Proxmox + QNAP + FOG + ZeroTier
 
-Este proyecto documenta el diseño e implementación de una infraestructura de red y almacenamiento orientada a un entorno educativo, con separación clara de roles entre profesorado y alumnado, acceso remoto seguro y administración centralizada.
-
----
-
-## 🎯 Objetivo del proyecto
-
-El objetivo principal es proporcionar un sistema que permita:
-
-- Al **profesorado** disponer de un espacio privado y persistente para almacenar y gestionar archivos.
-- Al **alumnado** acceder a recursos comunes sin necesidad de autenticación.
-- Al **administrador** gestionar usuarios, permisos y accesos de forma segura y automatizada.
-- Permitir **acceso remoto** a los servicios sin exponerlos directamente a Internet.
+Sistema de infraestructura para entornos educativos que combina virtualización, almacenamiento centralizado, despliegue de imágenes y acceso remoto seguro.
 
 ---
 
-## 🏗️ Arquitectura general
+## 🏗️ Arquitectura del proyecto
 
-La infraestructura se apoya en las siguientes tecnologías:
-
-- **Hipervisor:** Proxmox VE
-- **Servidor de archivos:** srv-files (Linux)
-- **Almacenamiento:** NAS montado mediante NFS
-- **Compartición de archivos:** Samba
-- **Acceso remoto:** ZeroTier
-- **Despliegue y clonación de equipos:** FOG Project
-
-La arquitectura está diseñada para minimizar la superficie de ataque y facilitar el mantenimiento a largo plazo.
-
----
-
-## 🌐 Redes utilizadas
-
-- **Red LAN:** `192.168.1.0/24`
-- **Red virtual privada:** ZeroTier (`10.x.x.x`)
-
-El acceso remoto se realiza exclusivamente a través de ZeroTier.
-
----
-
-## 📂 Estructura del repositorio
-docs/
-scripts/
-
-- **docs/** → Documentación técnica detallada  
-- **scripts/** → Scripts de automatización  
-
----
-
-## 📁 Estructura del almacenamiento
-
-El NAS se monta en el servidor de archivos y se organiza de la siguiente forma:
 ```
-/mnt/nas
-├── profesorado/
-│ ├── usuario1/
-│ └── usuario2/
-└── alumnado/
+ZeroTier (acceso remoto)
+        │
+        ▼
+┌───────────────────────────────────────┐
+│           PROXMOX 9                   │
+│  Hypervisor central                   │
+│                                       │
+│  VM: FOG (disco local) ────────────► Aulas (captura/despliegue Windows)
+│                                       │
+│  Pool profesor_A → nas-prof-A (NAS)   │
+│  Pool profesor_B → nas-prof-B (NAS)   │
+│  Pool profesor_N → nas-prof-N (NAS)   │
+│              │                        │
+│              ▼ NFS                    │
+└──────────────┼────────────────────────┘
+               │
+               ▼
+┌──────────────────────────┐
+│     NAS QNAP TS-431P     │
+│     10 TB RAID5          │
+│                          │
+│  /profesores/            │
+│    ├── juan/  (privado)  │
+│    └── maria/ (privado)  │
+│  /isos/      (público)   │
+│  /backups/   (admin)     │
+│  /fog/                   │
+│    └── imagenes/         │
+└──────────────────────────┘
 ```
 
-### Profesorado
-- Carpeta privada por usuario
-- Acceso autenticado mediante Samba
-- Permisos de lectura y escritura
+---
 
-### Alumnado
-- Carpeta común
-- Acceso como invitado (guest)
-- Sin usuarios locales ni Samba
-- Acceso limitado a recursos públicos
+## 🖥️ Componentes
+
+### Proxmox 9
+- Hypervisor principal
+- Gestión de pools privados por profesor
+- Almacenamiento de VMs en el NAS via NFS (storage privado por profesor)
+- Disco de FOG en local (local-lvm) para mejor rendimiento
+- Acceso via navegador web (noVNC)
+
+### NAS QNAP TS-431P (QTS 4.3.4)
+- 4 discos en RAID5 → 10.63 TB útiles
+- Samba para acceso desde Windows (share privado por profesor)
+- NFS para montaje en Proxmox (share individual por profesor)
+- ZeroTier instalado para acceso remoto
+- Imágenes FOG almacenadas en `/fog/imagenes/`
+
+### FOG Project
+- Captura y despliegue de imágenes Windows en aulas
+- VM con disco en `local-lvm` de Proxmox
+- Imágenes almacenadas en `/fog/imagenes/` del NAS
+
+### ZeroTier
+- VPN para acceso remoto desde casa
+- Profesores acceden a Proxmox y NAS como si estuvieran en el centro
 
 ---
 
-## 👥 Gestión de usuarios
+## 📋 IPs del proyecto
 
-- Cada profesor dispone de:
-  - Usuario Linux
-  - Usuario Samba
-  - Carpeta privada en el NAS
-- El alumnado **no tiene usuarios creados** en el sistema.
-- La creación de usuarios del profesorado se automatiza mediante script.
+| Dispositivo | IP Actual (temporal) | IP Definitiva (día 18) | IP ZeroTier |
+|---|---|---|---|
+| Proxmox | 10.0.20.219 | 192.168.1.100 | 10.230.74.86 |
+| NAS QNAP | 10.0.86.82 | 192.168.1.200 | 10.230.74.51 |
 
----
-
-## 🚀 Automatización
-
-El proyecto incluye un script interactivo para la creación segura de usuarios del profesorado:
-scripts/crear_profesor.sh
-
-El script:
-- Comprueba si el usuario ya existe
-- Verifica carpetas locales y en el NAS
-- Crea usuarios Linux y Samba si es necesario
-- Aplica permisos correctos
-- Muestra el estado final de la configuración
+> ⚠️ Actualizar `NAS_IP` y `PROXMOX_IP` en el script el día 18.
 
 ---
 
-## 💻 Despliegue y clonación de equipos (FOG)
+## 📁 Estructura del NAS
 
-El sistema de despliegue de equipos del aula se basa en **FOG Project**, una plataforma de clonación y administración de equipos mediante red.
-
-FOG permite capturar imágenes completas de un sistema operativo y desplegarlas posteriormente en múltiples equipos de forma automatizada a través de la red.
-
----
-
-### 🎯 Objetivo en la infraestructura
-
-El uso de FOG permite:
-
-- **Capturar una imagen base** de un equipo Windows configurado para el aula.
-- **Desplegar rápidamente** esa imagen en todos los equipos de los alumnos.
-- Mantener **todos los equipos con la misma configuración** de software.
-- Reducir el tiempo necesario para **reinstalaciones o recuperación del sistema**.
-- Facilitar la **gestión centralizada de los equipos del aula**.
+| Carpeta | Propósito | Acceso |
+|---|---|---|
+| `/profesores/juan/` | Datos y VMs del profesor juan | Solo juan + admin |
+| `/isos/` | ISOs comunes para VMs | Lectura todos, escritura admin/profesores |
+| `/backups/` | Backups automáticos de Proxmox | Solo admin |
+| `/fog/imagenes/` | Imágenes Windows capturadas por FOG | Solo FOG + admin |
 
 ---
 
-### 🧩 Funcionamiento general
+## 👤 Gestión de profesores
 
-El proceso de trabajo con FOG sigue tres fases principales:
+Cada profesor tiene:
+- **Usuario en QNAP** con acceso Samba a su carpeta privada
+- **Share Samba oculto** en el NAS: `\\NAS\nombreprofesor`
+- **Carpeta física** en el NAS: `/profesores/nombreprofesor`
+- **Usuario en Proxmox** (`nombre@pve`)
+- **Pool privado** en Proxmox (`pool_nombre`)
+- **Storage NFS privado** en Proxmox (`nas-prof-nombre`)
 
-1. **Registro del equipo**
-   - El equipo cliente arranca por red mediante **PXE**.
-   - Se registra automáticamente en el servidor FOG.
+### Acceso desde Windows
 
-2. **Captura de imagen**
-   - Se prepara un equipo maestro con:
-     - Windows instalado
-     - Software educativo necesario
-     - Configuración del sistema del aula
-   - El equipo arranca por red y FOG **captura la imagen del disco**.
-   - La imagen queda almacenada en el servidor FOG.
+```
+Carpeta privada (centro):  \\192.168.1.200\nombreprofesor
+Carpeta privada (casa):    \\10.230.74.51\nombreprofesor
+ISOs comunes:              \\IP_NAS\isos (usuario: everyone, sin contraseña)
+```
 
-3. **Despliegue de la imagen**
-   - Los equipos del aula arrancan mediante **PXE**.
-   - El servidor FOG despliega la imagen almacenada.
-   - Todos los equipos reciben una **instalación idéntica**.
+> ⚠️ Windows no permite sesiones simultáneas con diferentes usuarios al mismo servidor.
+> Si hay conflicto: `net use * /delete /yes` en CMD y reconectar.
 
----
+### Acceso a Proxmox
 
-
-Este modelo permite reinstalar **todos los equipos del aula en pocos minutos**, garantizando que cada equipo tenga exactamente la misma configuración.
-
----
-
-### 🌐 Integración con la red del proyecto
-
-FOG se integra dentro de la infraestructura de la siguiente manera:
-
-- **Servidor:** en la red LAN `192.168.1.139/24`
-- **Clientes:** equipos Windows del aula
-- **Arranque de red:** mediante **PXE**
-- **Gestión:** interfaz web del servidor FOG
-
-El tráfico de clonación se mantiene **dentro de la red local**, evitando saturar otros segmentos de red y mejorando la velocidad de despliegue.
+```
+Centro: https://192.168.1.100:8006
+Casa:   https://10.230.74.86:8006
+```
 
 ---
 
-### 📦 Ventajas en el entorno educativo
+## 🔐 Privacidad y seguridad
 
-- Instalación masiva de sistemas en **pocos minutos**
-- Restauración rápida tras errores del alumnado
-- **Homogeneidad** en todos los equipos del aula
-- Reducción del trabajo de mantenimiento
-- Gestión centralizada desde un único servidor
-
-## 🔐 Seguridad
-
-- No se exponen servicios directamente a Internet
-- Acceso remoto exclusivamente mediante ZeroTier
-- Separación estricta entre datos públicos y privados
-- Uso de permisos mínimos necesarios
-- Sin cuentas de alumnado en el sistema
+- Cada profesor solo ve su pool en Proxmox
+- Las carpetas del NAS tienen `chmod 700` (solo el propietario accede)
+- Los shares Samba son ocultos (`hidden=1`, `browsable=no`)
+- Acceso NFS restringido a la IP local de Proxmox
+- ZeroTier gestiona el acceso remoto seguro
 
 ---
 
-## 📚 Documentación
+## 💽 Almacenamiento Proxmox (LVM)
 
-Toda la documentación técnica se encuentra en la carpeta `docs/`.
+```
+VG: pve (4TB disco físico)
+├── root:          96GB  → Sistema Proxmox
+├── swap:           8GB  → Memoria swap
+├── data (thin):  200GB  → Thin pool para VMs locales
+│   └── vm-102:   62GB  → Disco VM FOG
+└── Libre:        ~3.4TB → Disponible para crecer
+```
+
+> Las VMs de profesores se almacenan en el NAS, no en el thin pool local.
 
 ---
 
-## 🛠️ Requisitos
+## 🔧 Script de gestión: `gestionar_profesor.sh`
 
-- Proxmox VE
-- Sistema Linux (Ubuntu Server)
-- NAS compatible con NFS
-- Cliente ZeroTier
-- Clientes Windows/Linux para acceso Samba
+
+
+
+### Qué hace al crear un profesor (8 pasos)
+
+```
+1. Crea usuario nativo en QNAP con Samba
+2. Añade al grupo "profesores"
+3. Crea carpeta privada /profesores/USUARIO (chmod 700)
+4. Crea share Samba oculto (hidden=1, guest=deny)
+5. Habilita NFS y da acceso rw a IP de Proxmox
+6. Monta storage NFS privado en Proxmox (vers=3, images+rootdir+import)
+7. Crea usuario USUARIO@pve en Proxmox
+8. Crea pool y asigna todos los permisos necesarios
+```
+
+### Qué hace al eliminar un profesor
+
+```
+- Gestiona VMs del pool (eliminar o mover al admin)
+- Elimina storage NFS de Proxmox
+- Elimina pool de Proxmox
+- Elimina usuario de Proxmox
+- Elimina share Samba del NAS
+- Elimina usuario del NAS
+- Elimina carpeta del NAS (pregunta si conservarla)
+```
+
+### Configuración del script
+
+```bash
+NAS_IP="10.0.86.82"              # IP local del NAS → cambiar a 192.168.1.200 el día 18
+NAS_IP_ZEROTIER="10.230.74.51"   # IP ZeroTier del NAS
+PROXMOX_IP="10.0.20.219"         # IP local de Proxmox → cambiar a 192.168.1.100 el día 18
+PROXMOX_NODE="server"            # Nombre del nodo Proxmox
+NAS_VOLUME_ID="1"                # VolumeID del RAID5 en QNAP
+```
 
 ---
 
-## 📌 Notas finales
+## 🗓️ Pendiente
 
-Este proyecto está diseñado para ser:
+- [ ] Actualizar IPs en el script el día 18
+- [ ] Ir al centro y capturar imagen Windows con FOG
+- [ ] Eliminar VM SRV-FILES (ID 101, apagada)
+- [ ] Probar acceso Samba desde PCs del centro en red local
 
-- Reproducible
-- Seguro
-- Escalable
-- Fácil de mantener
-- Correctamente documentado para uso futuro
+### Nota sobre storages NFS en Proxmox
+Los storages `nas-prof-USUARIO` pueden mostrar un interrogante en la GUI de Proxmox aunque estén funcionando correctamente. Es un bug visual que no afecta al funcionamiento. El storage es accesible desde Windows y Proxmox puede usarlo normalmente.
