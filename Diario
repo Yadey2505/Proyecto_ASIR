@@ -1,0 +1,71 @@
+Diario del proyecto: Infraestructura virtual con almacenamiento centralizado
+(Yadey Rivero, Jonatan Cubas y Aarón Alemán)
+
+
+Introducción
+
+El objetivo de este proyecto es montar una infraestructura que permita gestionar de forma más sencilla un aula informática. Para ello se pretende centralizar varios servicios en un servidor utilizando Proxmox, que nos permite crear diferentes máquinas virtuales para cada función.
+
+Por un lado, se implementará un servidor FOG, que permitirá capturar y desplegar imágenes de sistemas operativos en los ordenadores del aula. Esto facilitará mucho la preparación de los equipos del alumnado, ya que no será necesario instalar el sistema operativo y los programas manualmente en cada ordenador.
+
+También se configurará un NAS que servirá como almacenamiento centralizado. En este almacenamiento se guardarán tanto imágenes del sistema como carpetas separadas para cada profesor, de forma que puedan almacenar y organizar sus archivos.
+
+Además, se utilizará ZeroTier para crear una VPN que permita acceder al servidor Proxmox de forma remota, lo que facilita la gestión y el mantenimiento del sistema sin tener que estar físicamente en la red del centro.
+
+En general, el proyecto busca crear un sistema que permita desplegar equipos fácilmente, centralizar el almacenamiento de archivos y facilitar el acceso remoto al servidor.
+
+
+
+
+
+19 de Enero
+
+El primer día comenzamos organizando el proyecto y comentando qué servicios íbamos a implementar. Utilizamos Proxmox como base para poder ejecutar todos los servicios mediante máquinas virtuales.
+
+Durante esta sesión realizamos la instalación de Proxmox en el servidor y configuramos los parámetros básicos de red. Después comprobamos que podíamos acceder correctamente a la interfaz web de administración desde otro ordenador.
+
+También aprovechamos para explorar un poco el entorno de Proxmox y ver cómo se gestionan las máquinas virtuales.
+
+3 de Febrero
+
+Durante esta jornada configuramos ZeroTier para poder acceder al servidor de forma remota.
+
+Instalamos el cliente en el servidor y lo conectamos a la red virtual. Después hicimos varias pruebas para comprobar que era posible acceder a Proxmox desde fuera de la red local.
+
+Esto permitirá administrar el servidor sin tener que estar físicamente en el aula.
+
+
+
+18 de Febrero
+
+En esta sesión comenzamos a trabajar con el NAS que formará parte del proyecto. Creamos una máquina virtual “SRV-Files” dentro de Proxmox destinada al almacenamiento.
+
+Después configuramos varias carpetas que se utilizarán dentro del sistema, incluyendo directorios para guardar imágenes y carpetas separadas para los profesores, donde podrán almacenar sus archivos.
+
+También realizamos algunas pruebas básicas para comprobar que el almacenamiento funcionaba correctamente.
+
+
+5 de Marzo
+
+En esta sesión instalamos el servidor FOG en una máquina virtual dentro de Proxmox.
+
+Una vez instalado, realizamos la captura de una imagen de prueba de un ordenador al que instalamos el sistema operativo y algunos programas. Esta imagen se utilizará para comprobar que el sistema funciona correctamente y para futuras pruebas de captura y despliegue en los equipos del aula.
+
+
+
+20 de Marzo
+
+Debido a las alertas meteorológicas activadas, no fue posible realizar la sesión presencial. Por este motivo, la jornada se desarrolló de forma telemática, centrando el trabajo en tareas de documentación y coordinación remota.
+
+
+6 de Abril
+
+Al retomar la actividad presencial, detectamos anomalías en la red tras la instalación de un nuevo switch. El dispositivo estaba asignando direcciones IP de forma errática en rangos incompatibles (10.x.x.x, 192.168.192.x, 172.x.x.x), lo cual sugiere un conflicto de configuración o la presencia de múltiples servidores DHCP activos.
+
+Esta inestabilidad provocó dos problemas críticos:
+
+    Pérdida de conectividad con el servidor: Al obtener IPs fuera del rango de la dirección estática configurada en el nodo de Proxmox, perdíamos el acceso a la gestión del entorno virtual.
+
+    Fallo en el despliegue PXE: La inconsistencia en el direccionamiento impidió realizar la instalación de la imagen desatendida a través de la red.
+
+Finalmente, con la asistencia del profesorado, se logró estabilizar el rango de red. No obstante, al ser un direccionamiento distinto al planteado inicialmente en nuestro diseño, no fue posible concluir el despliegue de la imagen en esta sesión. Queda pendiente el reajuste de la configuración de red para finalizar el proceso.
