@@ -20,9 +20,11 @@ ZeroTier (acceso remoto)
 │  Pool profesor_B → nas-prof-B (NAS)   │
 │  Pool profesor_N → nas-prof-N (NAS)   │
 │              │                        │
-│              ▼ NFS                    │
+│     VMs corren en Proxmox             │
+│     Discos almacenados en NAS via NFS │
+│              ▼                        │
 └──────────────┼────────────────────────┘
-               │
+               │ NFS
                ▼
 ┌──────────────────────────┐
 │     NAS QNAP TS-431P     │
@@ -31,7 +33,8 @@ ZeroTier (acceso remoto)
 │  /profesores/            │
 │    ├── juan/  (privado)  │
 │    └── maria/ (privado)  │
-│  /isos/      (público)   │
+│  /recursos/  (público)   │
+│    └── template/iso/     │
 │  /backups/   (admin)     │
 │  /fog/                   │
 │    └── imagenes/         │
@@ -43,10 +46,9 @@ ZeroTier (acceso remoto)
 ## 🖥️ Componentes
 
 ### Proxmox 9
-- Hypervisor principal
+- Hypervisor principal — las VMs **funcionan** aquí, sus discos se almacenan en el NAS
 - Gestión de pools privados por profesor
-- Almacenamiento de VMs en el NAS via NFS (storage privado por profesor)
-- Disco de FOG en local (local-lvm) para mejor rendimiento
+- Disco de FOG en local (local-lvm) para mejor rendimiento de captura/despliegue
 - Acceso via navegador web (noVNC)
 
 ### NAS QNAP TS-431P (QTS 4.3.4)
@@ -82,8 +84,9 @@ ZeroTier (acceso remoto)
 
 | Carpeta | Propósito | Acceso |
 |---|---|---|
-| `/profesores/juan/` | Datos y VMs del profesor juan | Solo juan + admin |
-| `/isos/` | ISOs comunes para VMs | Lectura todos, escritura admin/profesores |
+| `/profesores/USUARIO/` | Datos y VMs privados del profesor | Solo el profesor + admin |
+| `/recursos/` | Recursos públicos | Lectura y escritura todos (usuario: everyone) |
+| `/recursos/template/iso/` | ISOs para crear VMs en Proxmox | Via NFS desde Proxmox |
 | `/backups/` | Backups automáticos de Proxmox | Solo admin |
 | `/fog/imagenes/` | Imágenes Windows capturadas por FOG | Solo FOG + admin |
 
@@ -102,13 +105,17 @@ Cada profesor tiene:
 ### Acceso desde Windows
 
 ```
-Carpeta privada (centro):  \\192.168.1.200\nombreprofesor
-Carpeta privada (casa):    \\10.230.74.51\nombreprofesor
-ISOs comunes:              \\IP_NAS\isos (usuario: everyone, sin contraseña)
+Carpeta privada (centro):    \\192.168.1.200\nombreprofesor
+Carpeta privada (casa):      \\10.230.74.51\nombreprofesor
+Recursos públicos (centro):  \\192.168.1.200\recursos  (usuario: everyone, sin contraseña)
+Recursos públicos (casa):    \\10.230.74.51\recursos   (usuario: everyone, sin contraseña)
 ```
 
 > ⚠️ Windows no permite sesiones simultáneas con diferentes usuarios al mismo servidor.
 > Si hay conflicto: `net use * /delete /yes` en CMD y reconectar.
+>
+> ⚠️ En Windows modernos puede ser necesario activar el acceso de invitados:
+> `reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" /v AllowInsecureGuestAuth /t REG_DWORD /d 1 /f`
 
 ### Acceso a Proxmox
 
@@ -116,6 +123,13 @@ ISOs comunes:              \\IP_NAS\isos (usuario: everyone, sin contraseña)
 Centro: https://192.168.1.100:8006
 Casa:   https://10.230.74.86:8006
 ```
+
+### Visibilidad en Proxmox por rol
+
+| Usuario | Ve |
+|---|---|
+| `root@pam` | Todo |
+| `USUARIO@pve` | Solo su pool, su storage privado y nas-recursos |
 
 ---
 
@@ -129,25 +143,22 @@ Casa:   https://10.230.74.86:8006
 
 ---
 
-## 💽 Almacenamiento Proxmox (LVM)
+## 💽 Almacenamiento Proxmox
 
 ```
 VG: pve (4TB disco físico)
 ├── root:          96GB  → Sistema Proxmox
 ├── swap:           8GB  → Memoria swap
-├── data (thin):  200GB  → Thin pool para VMs locales
+├── data (thin):  200GB  → Thin pool — solo para VM FOG
 │   └── vm-102:   62GB  → Disco VM FOG
 └── Libre:        ~3.4TB → Disponible para crecer
 ```
 
-> Las VMs de profesores se almacenan en el NAS, no en el thin pool local.
+Las VMs de profesores almacenan sus discos en el NAS via NFS, no en el thin pool local.
 
 ---
 
 ## 🔧 Script de gestión: `gestionar_profesor.sh`
-
-
-
 
 ### Qué hace al crear un profesor (8 pasos)
 
@@ -155,9 +166,13 @@ VG: pve (4TB disco físico)
 1. Crea usuario nativo en QNAP con Samba
 2. Añade al grupo "profesores"
 3. Crea carpeta privada /profesores/USUARIO (chmod 700)
-4. Crea share Samba oculto (hidden=1, guest=deny)
-5. Habilita NFS y da acceso rw a IP de Proxmox
-6. Monta storage NFS privado en Proxmox (vers=3, images+rootdir+import)
+4. Crea share Samba oculto. Espera a que aparezca en smb.conf
+   (asíncrono en QNAP) antes de insertar admin users = USUARIO
+5. Ejecuta qcli_sharedfolder -N (crea /share/NFSv=4/USUARIO y escribe
+   en /etc/exports), espera, reescribe líneas limpias sin wildcard *
+   ni duplicados y recarga con exportfs -ra
+6. Limpia directorio huérfano si existe, espera export en showmount,
+   monta storage NFS privado en Proxmox (sin --options vers=3)
 7. Crea usuario USUARIO@pve en Proxmox
 8. Crea pool y asigna todos los permisos necesarios
 ```
@@ -166,10 +181,13 @@ VG: pve (4TB disco físico)
 
 ```
 - Gestiona VMs del pool (eliminar o mover al admin)
-- Elimina storage NFS de Proxmox
-- Elimina pool de Proxmox
-- Elimina usuario de Proxmox
+  Al eliminar: espera a que cada VM esté completamente destruida
+  antes de continuar (evita errores con discos en uso)
+- Elimina storage NFS + limpia directorio /mnt/pve/nas-prof-USUARIO
+- Elimina pool y usuario de Proxmox
 - Elimina share Samba del NAS
+- Limpia líneas del usuario en /etc/exports y recarga
+- Limpia /share/NFSv=4/USUARIO huérfano
 - Elimina usuario del NAS
 - Elimina carpeta del NAS (pregunta si conservarla)
 ```
@@ -193,5 +211,24 @@ NAS_VOLUME_ID="1"                # VolumeID del RAID5 en QNAP
 - [ ] Eliminar VM SRV-FILES (ID 101, apagada)
 - [ ] Probar acceso Samba desde PCs del centro en red local
 
-### Nota sobre storages NFS en Proxmox
-Los storages `nas-prof-USUARIO` pueden mostrar un interrogante en la GUI de Proxmox aunque estén funcionando correctamente. Es un bug visual que no afecta al funcionamiento. El storage es accesible desde Windows y Proxmox puede usarlo normalmente.
+---
+
+## 📝 Notas técnicas importantes
+
+### NFS en QNAP QTS 4.3.4
+- `qcli_sharedfolder -N` escribe en `/etc/exports` Y crea `/share/NFSv=4/USUARIO` — sin este directorio `exportfs -ra` falla
+- El QNAP añade automáticamente `*(ro,...)` y entradas duplicadas en `/etc/exports`
+- Solución: reescribir las líneas con `sed` tras el `-N` y recargar con `exportfs -ra`
+- `qcli_sharedfolder -T` es innecesario — `-N` ya añade la IP automáticamente
+- `qcli_sharedfolder -R` NO funciona en QTS 4.3.4
+- Los storages `nas-prof-USUARIO` NO deben usar `--options vers=3` — causa `inactive` en la GUI
+
+### Samba en QNAP
+- Requiere `admin users = USUARIO` en smb.conf para autenticación correcta
+- El QNAP escribe smb.conf de forma asíncrona — hay que esperar a que el share aparezca antes de modificarlo
+- NO usar `killall smbd` manualmente (corrompe la configuración)
+- El sid de autenticación caduca: renovar con `qcli -l user=admin pw=PASS saveauthsid=yes`
+
+### Storages en Proxmox
+- Los directorios `/mnt/pve/nas-prof-USUARIO` pueden quedar huérfanos si el script falla — se limpian automáticamente en rollback y al eliminar
+- Para limpiar manualmente: `umount -l /mnt/pve/nas-prof-X && rm -rf /mnt/pve/nas-prof-X`
