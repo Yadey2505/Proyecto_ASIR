@@ -221,7 +221,6 @@ NAS_VOLUME_ID="1"                # VolumeID del RAID5 en QNAP
 - Solución: reescribir las líneas con `sed` tras el `-N` y recargar con `exportfs -ra`
 - `qcli_sharedfolder -T` es innecesario — `-N` ya añade la IP automáticamente
 - `qcli_sharedfolder -R` NO funciona en QTS 4.3.4
-- Los storages `nas-prof-USUARIO` NO deben usar `--options vers=3` — causa `inactive` en la GUI
 
 ### Samba en QNAP
 - Requiere `admin users = USUARIO` en smb.conf para autenticación correcta
